@@ -10,6 +10,7 @@ class Player {
 public:
     void Init(Vector2 center, float speed);
     void Update(float dt, const Room& room);
+    void PushOutOf(const Room& room, int col, int row);
     void Draw() const;
 
     Rectangle Bounds() const;

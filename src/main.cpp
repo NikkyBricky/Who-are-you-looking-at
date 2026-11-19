@@ -1,6 +1,7 @@
 #include <raylib.h>
 
 #include <algorithm>
+#include <cmath>
 #include <iostream>
 
 #include "player.h"
@@ -35,7 +36,36 @@ int main() {
 
         player.Update(dt, room);
 
-        const Vector2 playerPos = player.Position();
+        Vector2 playerPos = player.Position();
+        int nearestDoorCol = -1;
+        int nearestDoorRow = -1;
+        float nearestDoorDist = 1000000.0f;
+
+        for (int row = 0; row < room.Rows(); ++row) {
+            for (int col = 0; col < room.Cols(); ++col) {
+                if (!room.IsDoor(col, row)) {
+                    continue;
+                }
+                const float dx = playerPos.x - (col * wayla::Room::TileSize + wayla::Room::TileSize / 2.0f);
+                const float dy = playerPos.y - (row * wayla::Room::TileSize + wayla::Room::TileSize / 2.0f);
+                const float dist = std::hypot(dx, dy);
+                if (dist < nearestDoorDist) {
+                    nearestDoorDist = dist;
+                    nearestDoorCol = col;
+                    nearestDoorRow = row;
+                }
+            }
+        }
+
+        if (nearestDoorDist < wayla::Room::TileSize * 1.5f && IsKeyPressed(KEY_E)) {
+            room.ToggleDoor(nearestDoorCol, nearestDoorRow);
+            player.PushOutOf(room, nearestDoorCol, nearestDoorRow);
+            playerPos = player.Position();
+            const float dx = playerPos.x - (nearestDoorCol * wayla::Room::TileSize + wayla::Room::TileSize / 2.0f);
+            const float dy = playerPos.y - (nearestDoorRow * wayla::Room::TileSize + wayla::Room::TileSize / 2.0f);
+            nearestDoorDist = std::hypot(dx, dy);
+        }
+
         const float halfViewWidth = screenWidth / 2.0f;
         const float halfViewHeight = screenHeight / 2.0f;
 
@@ -56,9 +86,16 @@ int main() {
             BeginMode2D(camera);
                 room.Draw();
                 player.Draw();
+
+                if (nearestDoorDist < wayla::Room::TileSize * 1.5f) {
+                    const int hintX = nearestDoorCol * wayla::Room::TileSize;
+                    const int hintY = nearestDoorRow * wayla::Room::TileSize - 16;
+                    DrawText(room.IsDoorOpen(nearestDoorCol, nearestDoorRow) ? "E - close" : "E - open",
+                             hintX, hintY, 10, Color{230, 220, 190, 255});
+                }
             EndMode2D();
 
-            DrawText("WASD / arrows - move    ESC - exit", 12, 12, 16,
+            DrawText("WASD / arrows - move    E - door    ESC - exit", 12, 12, 16,
                      Color{220, 220, 210, 255});
         EndDrawing();
     }

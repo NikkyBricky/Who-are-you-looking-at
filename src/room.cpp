@@ -14,11 +14,16 @@ constexpr Color kWallBase{38, 36, 40, 255};
 constexpr Color kWallTop{74, 69, 66, 255};
 constexpr Color kTableBase{82, 58, 38, 255};
 constexpr Color kTableTop{126, 92, 56, 255};
+constexpr Color kDoorBase{110, 70, 40, 255};
+constexpr Color kDoorTop{150, 105, 60, 255};
+constexpr Color kDoorLine{60, 40, 25, 255};
+constexpr Color kDoorFrame{70, 50, 35, 255};
 
 Tile TileFromChar(char c) {
     switch (c) {
         case '#': return Tile::Wall;
         case 'T': return Tile::Table;
+        case 'D': return Tile::Door;
         default:  return Tile::Floor;
     }
 }
@@ -32,9 +37,12 @@ void Room::Load(const std::vector<std::string>& rows) {
     for (const auto& row : rows_) {
         if (static_cast<int>(row.size()) != cols_) {
             cols_ = -1;
+            open_.clear();
             return;
         }
     }
+
+    open_.assign(rows_.size() * static_cast<std::size_t>(cols_), 0);
 }
 
 bool Room::LoadFromFile(const std::string& path) {
@@ -65,8 +73,32 @@ Tile Room::TileAt(int col, int row) const {
     return TileFromChar(rows_[static_cast<std::size_t>(row)][static_cast<std::size_t>(col)]);
 }
 
+std::size_t Room::Index(int col, int row) const {
+    return static_cast<std::size_t>(row) * static_cast<std::size_t>(cols_) + static_cast<std::size_t>(col);
+}
+
+bool Room::IsDoor(int col, int row) const {
+    return TileAt(col, row) == Tile::Door;
+}
+
+bool Room::IsDoorOpen(int col, int row) const {
+    return IsDoor(col, row) && open_[Index(col, row)] != 0;
+}
+
+void Room::ToggleDoor(int col, int row) {
+    if (!IsDoor(col, row)) {
+        return;
+    }
+    char& state = open_[Index(col, row)];
+    state = state == 0 ? 1 : 0;
+}
+
 bool Room::IsSolid(int col, int row) const {
-    return TileAt(col, row) != Tile::Floor;
+    const Tile tile = TileAt(col, row);
+    if (tile == Tile::Door) {
+        return !IsDoorOpen(col, row);
+    }
+    return tile != Tile::Floor;
 }
 
 bool Room::Collides(Rectangle box) const {
@@ -102,6 +134,16 @@ void Room::Draw() const {
                 case Tile::Table:
                     DrawRectangle(x, y, TileSize, TileSize, kTableBase);
                     DrawRectangle(x, y, TileSize, 8, kTableTop);
+                    break;
+                case Tile::Door:
+                    if (IsDoorOpen(col, row)) {
+                        DrawRectangle(x, y, 4, TileSize, kDoorFrame);
+                        DrawRectangle(x + TileSize - 4, y, 4, TileSize, kDoorFrame);
+                    } else {
+                        DrawRectangle(x, y, TileSize, TileSize, kDoorBase);
+                        DrawRectangle(x, y, TileSize, 6, kDoorTop);
+                        DrawRectangle(x + TileSize / 2 - 1, y, 2, TileSize, kDoorLine);
+                    }
                     break;
                 case Tile::Floor:
                     break;

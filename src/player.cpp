@@ -44,6 +44,59 @@ void Player::Update(float dt, const Room& room) {
     }
 }
 
+void Player::PushOutOf(const Room& room, int col, int row) {
+    const Rectangle door{
+        static_cast<float>(col * Room::TileSize),
+        static_cast<float>(row * Room::TileSize),
+        static_cast<float>(Room::TileSize),
+        static_cast<float>(Room::TileSize)
+    };
+
+    if (!CheckCollisionRecs(Bounds(), door)) {
+        return;
+    }
+
+    constexpr float kEpsilon = 0.01f;
+    const float leftX = door.x - kSize / 2.0f - kEpsilon;
+    const float rightX = door.x + door.width + kSize / 2.0f + kEpsilon;
+    const float upY = door.y - kSize / 2.0f - kEpsilon;
+    const float downY = door.y + door.height + kSize / 2.0f + kEpsilon;
+
+    const Vector2 candidates[] = {
+        Vector2{position_.x, upY},
+        Vector2{position_.x, downY},
+        Vector2{leftX, position_.y},
+        Vector2{rightX, position_.y},
+    };
+
+    float bestDistance = -1.0f;
+    Vector2 best = position_;
+
+    for (const Vector2& candidate : candidates) {
+        const Rectangle box{
+            candidate.x - kSize / 2.0f,
+            candidate.y - kSize / 2.0f,
+            kSize,
+            kSize
+        };
+        if (room.Collides(box)) {
+            continue;
+        }
+
+        const float dx = candidate.x - position_.x;
+        const float dy = candidate.y - position_.y;
+        const float distance = dx * dx + dy * dy;
+        if (bestDistance < 0.0f || distance < bestDistance) {
+            bestDistance = distance;
+            best = candidate;
+        }
+    }
+
+    if (bestDistance >= 0.0f) {
+        position_ = best;
+    }
+}
+
 void Player::Draw() const {
     const Rectangle body = Bounds();
 

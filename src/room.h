@@ -8,6 +8,12 @@
 
 namespace wayla {
 
+struct RenderItem {
+    int col;
+    int row;
+    float y;
+};
+
 enum class Tile {
     Floor,
     Wall,
@@ -22,7 +28,9 @@ public:
     void Load(const std::vector<std::string>& rows);
     bool LoadFromFile(const std::string& path);
 
-    void Draw() const;
+    void DrawFloor() const;
+    void DrawObject(int col, int row) const;
+    void CollectRenderItems(std::vector<RenderItem>& out) const;
 
     bool IsSolid(int col, int row) const;
     bool Collides(Rectangle box) const;

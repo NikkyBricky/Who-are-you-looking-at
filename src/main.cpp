@@ -2,7 +2,9 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstddef>
 #include <iostream>
+#include <vector>
 
 #include "player.h"
 #include "room.h"
@@ -30,6 +32,18 @@ int main() {
     camera.rotation = 0.0f;
     camera.zoom = 1.0f;
     camera.target = player.Position();
+
+    struct DrawEntry {
+        float y;
+        int col;
+        int row;
+        bool isPlayer;
+    };
+
+    std::vector<DrawEntry> drawList;
+    std::vector<wayla::RenderItem> roomItems;
+    drawList.reserve(static_cast<std::size_t>(room.Cols() * room.Rows() + 1));
+    roomItems.reserve(static_cast<std::size_t>(room.Cols() * room.Rows()));
 
     while (!WindowShouldClose()) {
         const float dt = GetFrameTime();
@@ -81,11 +95,32 @@ int main() {
             camera.target.y = worldHeight / 2.0f;
         }
 
+        drawList.clear();
+        roomItems.clear();
+        room.CollectRenderItems(roomItems);
+        for (const wayla::RenderItem& item : roomItems) {
+            drawList.push_back(DrawEntry{item.y, item.col, item.row, false});
+        }
+        const Rectangle playerBox = player.Bounds();
+        drawList.push_back(DrawEntry{playerBox.y + playerBox.height, -1, -1, true});
+        std::sort(drawList.begin(), drawList.end(), [](const DrawEntry& a, const DrawEntry& b) {
+            if (a.y != b.y) {
+                return a.y < b.y;
+            }
+            return a.col < b.col;
+        });
+
         BeginDrawing();
             ClearBackground(BLACK);
             BeginMode2D(camera);
-                room.Draw();
-                player.Draw();
+                room.DrawFloor();
+                for (const DrawEntry& entry : drawList) {
+                    if (entry.isPlayer) {
+                        player.Draw();
+                    } else {
+                        room.DrawObject(entry.col, entry.row);
+                    }
+                }
 
                 if (nearestDoorDist < wayla::Room::TileSize * 1.5f) {
                     const int hintX = nearestDoorCol * wayla::Room::TileSize;

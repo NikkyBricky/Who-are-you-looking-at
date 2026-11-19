@@ -18,6 +18,10 @@ constexpr Color kDoorBase{110, 70, 40, 255};
 constexpr Color kDoorTop{150, 105, 60, 255};
 constexpr Color kDoorLine{60, 40, 25, 255};
 constexpr Color kDoorFrame{70, 50, 35, 255};
+constexpr Color kTableGrain{150, 110, 70, 255};
+constexpr Color kTableLeg{60, 42, 28, 255};
+constexpr Color kWallShade{28, 27, 30, 255};
+constexpr int kLift = 14;
 
 Tile TileFromChar(char c) {
     switch (c) {
@@ -25,6 +29,37 @@ Tile TileFromChar(char c) {
         case 'T': return Tile::Table;
         case 'D': return Tile::Door;
         default:  return Tile::Floor;
+    }
+}
+
+void DrawWallTile(int x, int y) {
+    const int top = y - kLift;
+    DrawRectangle(x, top, Room::TileSize, Room::TileSize + kLift, kWallBase);
+    DrawRectangle(x, top, Room::TileSize, 8, kWallTop);
+    DrawRectangle(x, top + 8, Room::TileSize, 2, kWallShade);
+}
+
+void DrawTableTile(int x, int y) {
+    const int top = y - kLift;
+    DrawRectangle(x, top, Room::TileSize, Room::TileSize - 6, kTableTop);
+    DrawRectangle(x, y + 12, Room::TileSize, kLift + 6, kTableBase);
+    DrawRectangle(x + 3, top + 4, Room::TileSize - 6, 2, kTableGrain);
+    DrawRectangle(x + 3, top + 11, Room::TileSize - 6, 1, kTableGrain);
+    DrawRectangle(x + 3, y + 24, 4, 8, kTableLeg);
+    DrawRectangle(x + Room::TileSize - 7, y + 24, 4, 8, kTableLeg);
+}
+
+void DrawDoorTile(int x, int y, bool open) {
+    const int top = y - kLift;
+    if (open) {
+        DrawRectangle(x, top, 4, Room::TileSize + kLift, kDoorFrame);
+        DrawRectangle(x + Room::TileSize - 4, top, 4, Room::TileSize + kLift, kDoorFrame);
+        DrawRectangle(x, top, Room::TileSize, 4, kDoorFrame);
+    } else {
+        DrawRectangle(x, top, Room::TileSize, Room::TileSize + kLift, kDoorBase);
+        DrawRectangle(x, top, Room::TileSize, 6, kDoorTop);
+        DrawRectangle(x + Room::TileSize / 2 - 1, top, 2, Room::TileSize + kLift, kDoorLine);
+        DrawRectangle(x + Room::TileSize - 8, y + 6, 4, 3, kDoorTop);
     }
 }
 
@@ -102,10 +137,10 @@ bool Room::IsSolid(int col, int row) const {
 }
 
 bool Room::Collides(Rectangle box) const {
-    const int left = static_cast<int>(std::floor(box.x / TileSize));
-    const int top = static_cast<int>(std::floor(box.y / TileSize));
-    const int right = static_cast<int>(std::floor((box.x + box.width - 0.001f) / TileSize));
-    const int bottom = static_cast<int>(std::floor((box.y + box.height - 0.001f) / TileSize));
+    const int left = static_cast<int>(std::floor(box.x / Room::TileSize));
+    const int top = static_cast<int>(std::floor(box.y / Room::TileSize));
+    const int right = static_cast<int>(std::floor((box.x + box.width - 0.001f) / Room::TileSize));
+    const int bottom = static_cast<int>(std::floor((box.y + box.height - 0.001f) / Room::TileSize));
 
     for (int row = top; row <= bottom; ++row) {
         for (int col = left; col <= right; ++col) {
@@ -117,36 +152,39 @@ bool Room::Collides(Rectangle box) const {
     return false;
 }
 
-void Room::Draw() const {
+void Room::DrawFloor() const {
     for (int row = 0; row < static_cast<int>(rows_.size()); ++row) {
         for (int col = 0; col < cols_; ++col) {
-            const int x = col * TileSize;
-            const int y = row * TileSize;
-
             const Color floorColor = (col + row) % 2 == 0 ? kFloorA : kFloorB;
-            DrawRectangle(x, y, TileSize, TileSize, floorColor);
+            DrawRectangle(col * Room::TileSize, row * Room::TileSize, Room::TileSize, Room::TileSize, floorColor);
+        }
+    }
+}
 
-            switch (TileAt(col, row)) {
-                case Tile::Wall:
-                    DrawRectangle(x, y, TileSize, TileSize, kWallBase);
-                    DrawRectangle(x, y, TileSize, 6, kWallTop);
-                    break;
-                case Tile::Table:
-                    DrawRectangle(x, y, TileSize, TileSize, kTableBase);
-                    DrawRectangle(x, y, TileSize, 8, kTableTop);
-                    break;
-                case Tile::Door:
-                    if (IsDoorOpen(col, row)) {
-                        DrawRectangle(x, y, 4, TileSize, kDoorFrame);
-                        DrawRectangle(x + TileSize - 4, y, 4, TileSize, kDoorFrame);
-                    } else {
-                        DrawRectangle(x, y, TileSize, TileSize, kDoorBase);
-                        DrawRectangle(x, y, TileSize, 6, kDoorTop);
-                        DrawRectangle(x + TileSize / 2 - 1, y, 2, TileSize, kDoorLine);
-                    }
-                    break;
-                case Tile::Floor:
-                    break;
+void Room::DrawObject(int col, int row) const {
+    const int x = col * Room::TileSize;
+    const int y = row * Room::TileSize;
+
+    switch (TileAt(col, row)) {
+        case Tile::Wall:
+            DrawWallTile(x, y);
+            break;
+        case Tile::Table:
+            DrawTableTile(x, y);
+            break;
+        case Tile::Door:
+            DrawDoorTile(x, y, IsDoorOpen(col, row));
+            break;
+        case Tile::Floor:
+            break;
+    }
+}
+
+void Room::CollectRenderItems(std::vector<RenderItem>& out) const {
+    for (int row = 0; row < static_cast<int>(rows_.size()); ++row) {
+        for (int col = 0; col < cols_; ++col) {
+            if (TileAt(col, row) != Tile::Floor) {
+                out.push_back(RenderItem{col, row, static_cast<float>((row + 1) * Room::TileSize)});
             }
         }
     }

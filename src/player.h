@@ -13,6 +13,7 @@ public:
     void Draw() const;
 
     Rectangle Bounds() const;
+    Vector2 Position() const {return position_;}
 
 private:
     Vector2 position_{0.0f, 0.0f};

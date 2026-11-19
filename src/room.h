@@ -26,8 +26,8 @@ public:
 
     bool Collides(Rectangle box) const;
 
-    int Cols() const { return cols_; }
-    int Rows() const { return static_cast<int>(rows_.size()); }
+    int Cols() const {return cols_;}
+    int Rows() const {return static_cast<int>(rows_.size());}
 
 private:
     Tile TileAt(int col, int row) const;

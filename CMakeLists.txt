@@ -15,3 +15,4 @@ add_executable(wayla
 
 target_include_directories(wayla PRIVATE src)
 target_link_libraries(wayla PRIVATE raylib)
+target_compile_definitions(wayla PRIVATE WAYLA_DATA_DIR="${CMAKE_CURRENT_SOURCE_DIR}/data")

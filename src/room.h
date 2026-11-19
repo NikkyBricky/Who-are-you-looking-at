@@ -18,6 +18,7 @@ public:
     static constexpr int TileSize = 32;
 
     void Load(const std::vector<std::string>& rows);
+    bool LoadFromFile(const std::string& path);
 
     void Draw() const;
 

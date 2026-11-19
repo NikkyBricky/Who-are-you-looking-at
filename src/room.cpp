@@ -2,6 +2,7 @@
 
 #include <cmath>
 #include <cstddef>
+#include <fstream>
 
 namespace wayla {
 
@@ -34,6 +35,27 @@ void Room::Load(const std::vector<std::string>& rows) {
             return;
         }
     }
+}
+
+bool Room::LoadFromFile(const std::string& path) {
+    std::ifstream file(path);
+    if (!file.is_open()) {
+        return false;
+    }
+
+    std::vector<std::string> rows;
+    std::string line;
+    while (std::getline(file, line)) {
+        if (!line.empty() && line.back() == '\r') {
+            line.pop_back();
+        }
+        if (!line.empty()) {
+            rows.push_back(line);
+        }
+    }
+
+    Load(rows);
+    return cols_ > 0;
 }
 
 Tile Room::TileAt(int col, int row) const {
